@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodeScan — Technology Detector</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #04080f;
+  --surface: #080e1a;
+  --card: #0c1525;
+  --border: rgba(0,200,255,0.08);
+  --border-bright: rgba(0,200,255,0.22);
+  --text: #d4e8ff;
+  --muted: #3d6080;
+  --cyan: #00c8ff;
+  --cyan-dim: rgba(0,200,255,0.1);
+  --green: #00ff88;
+  --green-dim: rgba(0,255,136,0.1);
+  --yellow: #ffd060;
+  --yellow-dim: rgba(255,208,96,0.1);
+  --red: #ff4466;
+  --purple: #a855f7;
+  --orange: #ff8c42;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;font-weight:400;min-height:100vh;overflow-x:hidden;}
+
+/* BG */
+.bg-layer{position:fixed;inset:0;z-index:0;pointer-events:none;}
+.scanlines{position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,200,255,0.012) 2px,rgba(0,200,255,0.012) 4px);}
+.grid-bg{position:absolute;inset:0;background-image:linear-gradient(rgba(0,200,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,200,255,0.04) 1px,transparent 1px);background-size:48px 48px;}
+.orb1{position:absolute;width:700px;height:700px;top:-300px;left:-200px;background:radial-gradient(circle,rgba(0,200,255,0.06) 0%,transparent 65%);filter:blur(40px);}
+.orb2{position:absolute;width:500px;height:500px;bottom:-200px;right:-100px;background:radial-gradient(circle,rgba(0,255,136,0.05) 0%,transparent 65%);filter:blur(60px);}
+.corner-tl,.corner-tr,.corner-bl,.corner-br{position:absolute;width:60px;height:60px;border-color:var(--cyan);border-style:solid;opacity:0.15;}
+.corner-tl{top:20px;left:20px;border-width:1px 0 0 1px;}.corner-tr{top:20px;right:20px;border-width:1px 1px 0 0;}
+.corner-bl{bottom:20px;left:20px;border-width:0 0 1px 1px;}.corner-br{bottom:20px;right:20px;border-width:0 1px 1px 0;}
+
+/* LAYOUT */
+.container{position:relative;z-index:1;max-width:980px;margin:0 auto;padding:52px 24px 100px;}
+
+/* HEADER */
+header{margin-bottom:44px;}
+.header-top{display:flex;align-items:center;gap:16px;margin-bottom:18px;}
+.logo-icon{width:44px;height:44px;border:1px solid var(--cyan);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;box-shadow:0 0 20px rgba(0,200,255,0.15),inset 0 0 20px rgba(0,200,255,0.05);flex-shrink:0;position:relative;}
+.logo-icon::before{content:'';position:absolute;inset:-1px;border-radius:11px;background:linear-gradient(135deg,rgba(0,200,255,0.3),transparent 60%);pointer-events:none;}
+.header-titles{flex:1;}
+.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:2rem;letter-spacing:-0.02em;color:#fff;line-height:1;}
+.logo span{color:var(--cyan);}
+.logo-sub{font-family:'Space Mono',monospace;font-size:0.62rem;color:var(--muted);letter-spacing:0.2em;text-transform:uppercase;margin-top:3px;}
+.status-bar{display:flex;align-items:center;gap:8px;font-family:'Space Mono',monospace;font-size:0.62rem;color:var(--muted);letter-spacing:0.1em;}
+.status-dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:blink 2s ease-in-out infinite;flex-shrink:0;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+.header-desc{font-size:0.85rem;color:var(--muted);line-height:1.65;max-width:680px;font-family:'JetBrains Mono',monospace;font-weight:300;border-left:2px solid var(--border-bright);padding-left:16px;}
+
+/* SECTION LABEL */
+.label{font-family:'Space Mono',monospace;font-size:0.6rem;letter-spacing:0.3em;text-transform:uppercase;color:var(--cyan);margin-bottom:12px;display:flex;align-items:center;gap:10px;}
+.label::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* ─── LANGUAGE SELECTOR ─── */
+.lang-section{margin-bottom:20px;}
+.lang-grid{display:flex;flex-wrap:wrap;gap:8px;}
+.lang-chip{
+  background:var(--card);border:1px solid var(--border);border-radius:8px;
+  padding:7px 13px;font-family:'Space Mono',monospace;font-size:0.62rem;
+  color:var(--muted);cursor:pointer;transition:all 0.2s;letter-spacing:0.06em;
+  display:flex;align-items:center;gap:6px;user-select:none;
+}
+.lang-chip:hover{border-color:var(--border-bright);color:var(--cyan);}
+.lang-chip.active{border-color:var(--cyan);color:var(--cyan);background:var(--cyan-dim);box-shadow:0 0 12px rgba(0,200,255,0.1);}
+.lang-chip .chip-icon{font-size:0.85rem;}
+.lang-auto{background:linear-gradient(135deg,rgba(0,200,255,0.06),rgba(0,255,136,0.06));border-color:rgba(0,200,255,0.2);}
+.lang-auto.active{border-color:var(--cyan);}
+
+/* ─── EDITOR WRAPPER ─── */
+.editor-outer{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:8px;transition:border-color 0.3s,box-shadow 0.3s;position:relative;}
+.editor-outer:focus-within{border-color:var(--border-bright);box-shadow:0 0 40px rgba(0,200,255,0.06);}
+.editor-topbar{background:var(--card);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;gap:12px;}
+.editor-dots{display:flex;gap:6px;}
+.dot{width:10px;height:10px;border-radius:50%;}
+.dot-r{background:#ff5f56;}.dot-y{background:#ffbd2e;}.dot-g{background:#27c93f;}
+.editor-title{font-family:'Space Mono',monospace;font-size:0.65rem;color:var(--muted);letter-spacing:0.1em;margin-left:4px;}
+.editor-badge{margin-left:auto;font-family:'Space Mono',monospace;font-size:0.58rem;color:var(--cyan);background:var(--cyan-dim);padding:2px 8px;border-radius:4px;border:1px solid rgba(0,200,255,0.15);letter-spacing:0.1em;}
+.editor-body{display:flex;overflow:hidden;position:relative;}
+
+/* Line numbers */
+.line-num-col{
+  background:var(--card);border-right:1px solid var(--border);
+  padding:16px 10px;font-family:'JetBrains Mono',monospace;font-size:0.75rem;
+  color:var(--muted);line-height:1.6;user-select:none;
+  min-width:50px;text-align:right;flex-shrink:0;
+  display:flex;flex-direction:column;
+}
+.line-num-col span{display:block;height:1.2em;transition:color 0.2s;}
+.line-num-col span.error-line-num{color:var(--red)!important;font-weight:700;}
+
+/* Textarea + overlay */
+.editor-right{flex:1;position:relative;min-width:0;overflow:hidden;}
+.code-highlight-overlay{
+  position:absolute;top:0;left:0;right:0;bottom:0;
+  font-family:'JetBrains Mono',monospace;font-size:0.8rem;font-weight:300;
+  line-height:1.6;padding:16px 18px;
+  pointer-events:none;overflow:hidden;white-space:pre;
+  color:transparent;
+}
+.code-textarea{
+  position:relative;z-index:2;
+  width:100%;background:transparent;border:none;outline:none;
+  color:var(--text);font-family:'JetBrains Mono',monospace;
+  font-size:0.8rem;font-weight:300;line-height:1.6;
+  resize:none;padding:16px 18px;min-height:280px;
+  caret-color:var(--cyan);white-space:pre;overflow-wrap:normal;overflow-x:auto;
+}
+.code-textarea::placeholder{color:var(--muted);font-style:italic;}
+
+/* Error highlight spans */
+.err-word{
+  background:rgba(255,68,102,0.22);
+  border-bottom:2px solid var(--red);
+  border-radius:2px;
+  color:transparent;
+  position:relative;
+}
+.err-line-bg{background:rgba(255,68,102,0.06);}
+
+/* Error line gutter marker */
+.err-gutter{
+  position:absolute;right:0;top:0;bottom:0;width:4px;
+  background:var(--red);opacity:0;transition:opacity 0.3s;
+}
+
+/* Error panel below editor */
+.error-lines-panel{
+  background:rgba(10,4,14,0.95);border:1px solid rgba(255,68,102,0.2);
+  border-radius:10px;margin-bottom:20px;overflow:hidden;display:none;
+}
+.error-lines-panel.visible{display:block;animation:fadeUp 0.4s ease;}
+.elp-header{
+  background:rgba(255,68,102,0.08);border-bottom:1px solid rgba(255,68,102,0.15);
+  padding:10px 16px;display:flex;align-items:center;gap:8px;
+  font-family:'Space Mono',monospace;font-size:0.65rem;color:var(--red);letter-spacing:0.15em;
+}
+.elp-header::before{content:'⚠';font-size:0.8rem;}
+.elp-body{padding:4px 0;}
+.elp-row{
+  display:grid;grid-template-columns:56px 1fr;
+  font-family:'JetBrains Mono',monospace;font-size:0.74rem;
+  border-bottom:1px solid rgba(255,68,102,0.06);
+  transition:background 0.15s;
+}
+.elp-row:last-child{border-bottom:none;}
+.elp-row:hover{background:rgba(255,68,102,0.05);}
+.elp-linenum{
+  padding:9px 12px;color:var(--red);font-weight:700;
+  border-right:1px solid rgba(255,68,102,0.1);text-align:right;
+  background:rgba(255,68,102,0.04);font-size:0.68rem;display:flex;flex-direction:column;align-items:flex-end;justify-content:center;
+}
+.elp-content{padding:9px 14px;display:flex;flex-direction:column;gap:4px;}
+.elp-code{color:rgba(255,100,130,0.7);font-size:0.72rem;white-space:pre-wrap;word-break:break-all;}
+.elp-msg{color:var(--muted);font-size:0.68rem;line-height:1.5;}
+.elp-badge{display:inline-block;font-size:0.55rem;background:rgba(255,68,102,0.12);color:var(--red);border:1px solid rgba(255,68,102,0.2);border-radius:3px;padding:1px 6px;letter-spacing:0.1em;margin-right:6px;}
+
+/* Stats bar */
+.code-stats{display:flex;gap:16px;padding:4px 16px 10px;font-family:'Space Mono',monospace;font-size:0.58rem;color:var(--muted);letter-spacing:0.08em;}
+.code-stats span{display:flex;align-items:center;gap:4px;}
+.code-stats .stat-err{color:var(--red);}
+
+/* ANALYZE BTN */
+.analyze-btn{
+  width:100%;background:var(--surface);border:1px solid var(--cyan);
+  border-radius:12px;padding:17px 32px;color:var(--cyan);font-family:'Syne',sans-serif;
+  font-size:1rem;font-weight:700;letter-spacing:0.1em;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:12px;
+  transition:all 0.25s ease;margin-bottom:24px;position:relative;overflow:hidden;
+  box-shadow:0 0 30px rgba(0,200,255,0.08);
+}
+.analyze-btn::before{content:'';position:absolute;inset:0;background:var(--cyan-dim);opacity:0;transition:opacity 0.25s;}
+.analyze-btn:hover::before{opacity:1;}
+.analyze-btn:hover{box-shadow:0 0 40px rgba(0,200,255,0.2);transform:translateY(-1px);}
+.analyze-btn:active{transform:translateY(0);}
+.analyze-btn:disabled{opacity:0.35;cursor:not-allowed;transform:none;}
+.analyze-btn>*{position:relative;z-index:1;}
+.scan-line{position:absolute;left:-100%;top:0;bottom:0;width:60%;background:linear-gradient(90deg,transparent,rgba(0,200,255,0.15),transparent);animation:scanAnim 2s ease-in-out infinite;display:none;}
+.scanning .scan-line{display:block;}
+@keyframes scanAnim{to{left:140%;}}
+.spinner{width:16px;height:16px;border:2px solid rgba(0,200,255,0.2);border-top-color:var(--cyan);border-radius:50%;animation:spin 0.7s linear infinite;display:none;}
+.scanning .spinner{display:block;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* API ERROR */
+.api-error-box{background:rgba(255,68,102,0.06);border:1px solid rgba(255,68,102,0.2);border-radius:10px;padding:14px 18px;color:var(--red);font-family:'Space Mono',monospace;font-size:0.75rem;margin-bottom:20px;display:none;}
+.api-error-box.visible{display:block;}
+
+/* RESULTS */
+#results{display:none;}
+#results.visible{display:block;animation:fadeUp 0.5s ease;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+.confidence-panel{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:22px 24px;margin-bottom:24px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;}
+.conf-label{font-family:'Space Mono',monospace;font-size:0.62rem;color:var(--muted);letter-spacing:0.2em;text-transform:uppercase;margin-bottom:6px;}
+.conf-value{font-family:'Syne',sans-serif;font-size:2.2rem;font-weight:800;line-height:1;}
+.conf-bar-wrap{flex:1;min-width:200px;}
+.conf-bar-bg{height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin-top:10px;}
+.conf-bar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--cyan),var(--green));transition:width 1s cubic-bezier(.4,0,.2,1);box-shadow:0 0 10px rgba(0,200,255,0.5);}
+.conf-explanation{font-size:0.78rem;color:var(--muted);line-height:1.6;font-family:'JetBrains Mono',monospace;font-weight:300;flex:2;min-width:200px;}
+
+.results-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px;}
+@media(max-width:600px){.results-grid{grid-template-columns:1fr;}}
+.result-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;animation:fadeUp 0.4s ease both;transition:border-color 0.2s;position:relative;overflow:hidden;}
+.result-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:var(--card-accent,var(--cyan));opacity:0.5;}
+.result-card:hover{border-color:rgba(0,200,255,0.15);}
+.card-header{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+.card-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:0.9rem;flex-shrink:0;}
+.card-title{font-size:0.7rem;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);font-family:'Space Mono',monospace;}
+.card-items{display:flex;flex-direction:column;gap:8px;}
+.tech-item{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.tech-name{font-size:0.82rem;font-weight:600;color:var(--text);font-family:'JetBrains Mono',monospace;}
+.tech-badge{font-family:'Space Mono',monospace;font-size:0.58rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;padding:2px 8px;border-radius:4px;flex-shrink:0;}
+.badge-confirmed{background:rgba(0,255,136,0.12);color:var(--green);border:1px solid rgba(0,255,136,0.2);}
+.badge-possible{background:rgba(255,208,96,0.12);color:var(--yellow);border:1px solid rgba(255,208,96,0.2);}
+.badge-none{background:rgba(61,96,128,0.2);color:var(--muted);border:1px solid rgba(61,96,128,0.2);}
+.tech-note{font-size:0.7rem;color:var(--muted);font-family:'JetBrains Mono',monospace;font-weight:300;margin-top:2px;line-height:1.5;}
+.empty-state{font-family:'Space Mono',monospace;font-size:0.7rem;color:var(--muted);font-style:italic;opacity:0.6;}
+
+.explanation-panel{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:12px;}
+.explanation-title{font-size:0.7rem;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.explanation-title::before{content:'//';color:var(--cyan);}
+.explanation-text{font-family:'JetBrains Mono',monospace;font-size:0.78rem;font-weight:300;color:var(--text);line-height:1.8;white-space:pre-wrap;}
+
+.arch-panel{background:linear-gradient(135deg,rgba(0,200,255,0.05),rgba(0,255,136,0.05));border:1px solid var(--border-bright);border-radius:14px;padding:20px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+.arch-icon{font-size:1.8rem;}
+.arch-info{flex:1;}
+.arch-label{font-family:'Space Mono',monospace;font-size:0.6rem;color:var(--muted);letter-spacing:0.2em;text-transform:uppercase;margin-bottom:4px;}
+.arch-value{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;color:var(--cyan);}
+
+::-webkit-scrollbar{width:6px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:rgba(0,200,255,0.15);border-radius:3px;}
+</style>
+</head>
+<body>
+
+<div class="bg-layer">
+  <div class="scanlines"></div>
+  <div class="grid-bg"></div>
+  <div class="orb1"></div>
+  <div class="orb2"></div>
+  <div class="corner-tl"></div><div class="corner-tr"></div>
+  <div class="corner-bl"></div><div class="corner-br"></div>
+</div>
+
+<div class="container">
+
+  <!-- Header -->
+  <header>
+    <div class="header-top">
+      <div class="logo-icon">🔬</div>
+      <div class="header-titles">
+        <div class="logo">Code<span>Scan</span></div>
+        <div class="logo-sub">AI-Powered Technology Detector + Error Highlighter</div>
+      </div>
+      <div class="status-bar">
+        <div class="status-dot"></div>
+        <span>SYSTEM ONLINE</span>
+      </div>
+    </div>
+    <div class="header-desc">
+      Select your language, paste any source code. The AI detects technologies, highlights wrong words in red, and shows exactly which lines have errors — with full explanation.
+    </div>
+  </header>
+
+  <!-- ── Language Selector ── -->
+  <div class="label">Select Language</div>
+  <div class="lang-section">
+    <div class="lang-grid" id="langGrid">
+      <button class="lang-chip lang-auto active" data-lang="auto" onclick="selectLang(this)">
+        <span class="chip-icon">🤖</span> Auto-Detect
+      </button>
+      <button class="lang-chip" data-lang="javascript" onclick="selectLang(this)"><span class="chip-icon">🟨</span> JavaScript</button>
+      <button class="lang-chip" data-lang="typescript" onclick="selectLang(this)"><span class="chip-icon">🔷</span> TypeScript</button>
+      <button class="lang-chip" data-lang="python" onclick="selectLang(this)"><span class="chip-icon">🐍</span> Python</button>
+      <button class="lang-chip" data-lang="java" onclick="selectLang(this)"><span class="chip-icon">☕</span> Java</button>
+      <button class="lang-chip" data-lang="cpp" onclick="selectLang(this)"><span class="chip-icon">⚡</span> C++</button>
+      <button class="lang-chip" data-lang="csharp" onclick="selectLang(this)"><span class="chip-icon">💜</span> C#</button>
+      <button class="lang-chip" data-lang="php" onclick="selectLang(this)"><span class="chip-icon">🐘</span> PHP</button>
+      <button class="lang-chip" data-lang="go" onclick="selectLang(this)"><span class="chip-icon">🔵</span> Go</button>
+      <button class="lang-chip" data-lang="rust" onclick="selectLang(this)"><span class="chip-icon">🦀</span> Rust</button>
+      <button class="lang-chip" data-lang="ruby" onclick="selectLang(this)"><span class="chip-icon">💎</span> Ruby</button>
+      <button class="lang-chip" data-lang="swift" onclick="selectLang(this)"><span class="chip-icon">🍎</span> Swift</button>
+      <button class="lang-chip" data-lang="kotlin" onclick="selectLang(this)"><span class="chip-icon">🎯</span> Kotlin</button>
+      <button class="lang-chip" data-lang="html" onclick="selectLang(this)"><span class="chip-icon">🌐</span> HTML/CSS</button>
+      <button class="lang-chip" data-lang="sql" onclick="selectLang(this)"><span class="chip-icon">🗄️</span> SQL</button>
+      <button class="lang-chip" data-lang="bash" onclick="selectLang(this)"><span class="chip-icon">💻</span> Bash/Shell</button>
+    </div>
+  </div>
+
+  <!-- ── Code Editor ── -->
+  <div class="label" style="margin-top:8px;">Source Code Input</div>
+  <div class="editor-outer" id="editorOuter">
+    <div class="editor-topbar">
+      <div class="editor-dots">
+        <div class="dot dot-r"></div>
+        <div class="dot dot-y"></div>
+        <div class="dot dot-g"></div>
+      </div>
+      <div class="editor-title" id="editorTitle">paste_code_here.txt</div>
+      <div class="editor-badge" id="editorBadge">MULTI-LANGUAGE</div>
+    </div>
+    <div class="editor-body">
+      <!-- Line numbers -->
+      <div class="line-num-col" id="lineNums"></div>
+      <!-- Code area -->
+      <div class="editor-right">
+        <div class="code-highlight-overlay" id="highlightOverlay" aria-hidden="true"></div>
+        <textarea
+          id="codeInput"
+          class="code-textarea"
+          spellcheck="false"
+          placeholder="// Paste your source code here...
+// Supports ALL languages: Python, JavaScript, Java, C++, PHP, Go, Rust, TypeScript, Ruby, C#, Swift, Kotlin, SQL, Bash and more
+
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import mongoose from 'mongoose';
+
+// The AI will:
+// 1. Detect all technologies used
+// 2. Find syntax errors & wrong words
+// 3. Highlight problem lines in red
+// 4. Explain each issue below"></textarea>
+      </div>
+    </div>
+    <!-- Stats -->
+    <div class="code-stats" id="codeStats">
+      <span id="statLines">Lines: 0</span>
+      <span id="statChars">Chars: 0</span>
+      <span id="statLang">Language: Auto</
